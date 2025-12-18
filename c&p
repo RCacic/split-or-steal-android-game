@@ -1,78 +1,24 @@
-import serial
-import time
-from flask import Flask, render_template
-
-app = Flask(__name__)
-
-# Dictionary of pins with name of pin and state ON/OFF
-pins = {
-    2: {'name': 'PIN 2', 'state': 0},
-    3: {'name': 'PIN 3', 'state': 0}
-}
-
-ser = None
-
-# Main function when accessing the website
-@app.route("/")
-def index():
-    templateData = {
-        'pins': pins
-    }
-    return render_template('index.html', **templateData)
-
-# Function to send simple commands (action1–action4)
-@app.route("/<action>")
-def action(action):
-    if action == "action1":
-        ser.write(b"1")
-        pins[2]['state'] = 1
-    elif action == "action2":
-        ser.write(b"2")
-        pins[2]['state'] = 0
-    elif action == "action3":
-        ser.write(b"3")
-        pins[3]['state'] = 1
-    elif action == "action4":
-        ser.write(b"4")
-        pins[3]['state'] = 0
-
-    templateData = {
-        'pins': pins
-    }
-    return render_template('index.html', **templateData)
-
-# Function with buttons that toggle depending on the status
-@app.route("/<changePin>/<toggle>")
-def toggle_function(changePin, toggle):
-    changePin = int(changePin)
-
-    if changePin not in pins:
-        return "Invalid pin", 404
-
-    if toggle == "on":
-        if changePin == 2:
-            ser.write(b"1")
-        elif changePin == 3:
-            ser.write(b"3")
-        pins[changePin]['state'] = 1
-
-    elif toggle == "off":
-        if changePin == 2:
-            ser.write(b"2")
-        elif changePin == 3:
-            ser.write(b"4")
-        pins[changePin]['state'] = 0
-
-    templateData = {
-        'pins': pins
-    }
-    return render_template('index.html', **templateData)
-
-# Main function, set up serial bus and start the service
-if __name__ == "__main__":
-    # CHANGE THIS IF YOUR ARDUINO USES A DIFFERENT PORT
-    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-    time.sleep(2)
-    ser.flush()
-
-    app.run(host='0.0.0.0', port=80, debug=True)
+<!DOCTYPE html>
+<head>
+    <title>Arduino Web Server</title>
+        <body>
+    <h1> Arduino Web Server </h1>
+    <h2> Toggle buttons </h2>
+    {% for pin in pins %}
+        <h3>{{ pins[pin].name }}
+        {% if pins[pin].state == 1 %}
+        is currently <strong>on</strong></h2><div class="row"><div class="col-md-2"><a href="/pin{{pin}}/off" class="btn btn-bloc btn-lg btn-default" role=button>Turn off</a></div></div>
+    {% else%}
+        is currently <strong>off</strong></h2><div class="row"><div class="col-md-2"><a href="/pin{{pin}}/on" class="btn btn-bloc btn-lg btn-default" role=button>Turn on</a></div></div>
+    
+{% endif %}
+    {% endfor %}
+    
+    <h2> Commands </h2>
+    <h3> LED pin 2: <a href="/action1" >TURN ON</a>
+        <h3> LED pin 2: <a href="/action2" >TURN OFF</a>
+            <h3> LED pin 3: <a href="/action3" >TURN ON</a>
+                <h3> LED pin 3: <a href="/action4" >TURN OFF</a>
+        
+    </body>
+                </html>
