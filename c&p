@@ -1,72 +1,30 @@
-import serial
-import time
-from flask import Flask, render_template
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Arduino Web Server</title>
+</head>
+<body>
+  <h1>Arduino Web Server</h1>
+  <h2>Toggle buttons</h2>
 
-app = Flask(__name__)
+  {% for pin in pins %}
+    <h3>{{ pins[pin].name }}</h3>
 
-# Dictionary of pins with name of pin and state ON/OFF
-pins = {
-    2: {'name': 'PIN 2', 'state': 0},
-    3: {'name': 'PIN 3', 'state': 0}
-}
+    {% if pins[pin].state == 1 %}
+      is currently <strong>on</strong>
+      <a href="/{{pin}}/off">Turn off</a>
+    {% else %}
+      is currently <strong>off</strong>
+      <a href="/{{pin}}/on">Turn on</a>
+    {% endif %}
+    <hr>
+  {% endfor %}
 
-ser = None
+  <h2>Commands</h2>
+  <p><a href="/action1">LED pin 2: TURN ON</a></p>
+  <p><a href="/action2">LED pin 2: TURN OFF</a></p>
+  <p><a href="/action3">LED pin 3: TURN ON</a></p>
+  <p><a href="/action4">LED pin 3: TURN OFF</a></p>
+</body>
+</html>
 
-# Main function when accessing the website
-@app.route("/")
-def index():
-    templateData = {'pins': pins}
-    return render_template('index.html', **templateData)
-
-# Function to send simple commands (action1..action4)
-@app.route("/<action>")
-def action(action):
-    if action == "action1":
-        ser.write(b"1")
-        pins[2]['state'] = 1
-    elif action == "action2":
-        ser.write(b"2")
-        pins[2]['state'] = 0
-    elif action == "action3":
-        ser.write(b"3")
-        pins[3]['state'] = 1
-    elif action == "action4":
-        ser.write(b"4")
-        pins[3]['state'] = 0
-
-    templateData = {'pins': pins}
-    return render_template('index.html', **templateData)
-
-# Function with buttons that toggle depending on the status (/2/on, /2/off etc.)
-@app.route("/<changePin>/<toggle>")
-def toggle_function(changePin, toggle):
-    changePin = int(changePin)
-
-    if changePin not in pins:
-        return "Invalid pin", 404
-
-    if toggle == "on":
-        if changePin == 2:
-            ser.write(b"1")
-        elif changePin == 3:
-            ser.write(b"3")
-        pins[changePin]['state'] = 1
-
-    elif toggle == "off":
-        if changePin == 2:
-            ser.write(b"2")
-        elif changePin == 3:
-            ser.write(b"4")
-        pins[changePin]['state'] = 0
-
-    templateData = {'pins': pins}
-    return render_template('index.html', **templateData)
-
-# Main function, set up serial bus and start the service.
-if __name__ == "__main__":
-    # IMPORTANT: use your actual Arduino device (usually /dev/ttyACM0 in VirtualBox USB passthrough)
-    ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-    time.sleep(2)
-    ser.flush()
-
-    app.run(host='0.0.0.0', port=80, debug=True)
