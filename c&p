@@ -1,5 +1,86 @@
-sudo python3 - <<EOF
-import serial
-ser = serial.Serial('/dev/ttyACM0',9600,timeout=2)
-print(ser.readline())
-EOF
+fatsic@raspberry:~/web-server $ ls
+flask-helloworld.py  led_control.py  templates
+fatsic@raspberry:~/web-server $ sudo python3 led_control.py
+ * Serving Flask app "led_control" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+ * Running on http://0.0.0.0:80/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 278-817-734
+^Cfatsic@raspberry:~/web-server $ nano led_control.py
+fatsic@raspberry:~/web-server $ sudo python3 led_control.py
+ * Serving Flask app "led_control" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+ * Running on http://0.0.0.0:80/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 278-817-734
+127.0.0.1 - - [19/Dec/2025 10:51:34] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:34] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:44] "GET /2/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:44] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:45] "GET /2/off HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:45] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:46] "GET /3/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:46] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:47] "GET /3/off HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:47] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:48] "GET /action1 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:48] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:48] "GET /action1 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:48] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:49] "GET /action2 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:49] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:50] "GET /action3 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:50] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:51] "GET /action1 HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 10:51:51] "GET /favicon.ico HTTP/1.1" 200 -
+^Cfatsic@raspberry:~/web-server $ nano ~/web-server/led_control.py
+fatsic@raspberry:~/web-server $ nano templates/index.html
+fatsic@raspberry:~/web-server $ sudo python3 led_control.py
+ * Serving Flask app "led_control" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: on
+ * Running on http://0.0.0.0:80/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 278-817-734
+127.0.0.1 - - [19/Dec/2025 11:00:26] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:26] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:32] "GET /2/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:32] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:42] "GET /2/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:43] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:43] "GET /2/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:00:43] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:09] "GET /2/off HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:09] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:10] "GET /3/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:10] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:11] "GET /3/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:11] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:12] "GET /3/on HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:12] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:16] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:16] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:30] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:30] "GET /favicon.ico HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:46] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Dec/2025 11:01:46] "GET /favicon.ico HTTP/1.1" 200 -
+^Cfatsic@raspberry:~/web-server $ ^[[200~sudo python3 - <<EOF
+> import serial
+> ser = serial.Serial('/dev/ttyACM0',9600,timeout=2)
+> print(ser.readline())
+> EOF~
+> 
+> ^C
+fatsic@raspberry:~/web-server $ ^[[200~sudo python3 - <<EOF~
+> 
