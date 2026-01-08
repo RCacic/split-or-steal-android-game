@@ -1,56 +1,55 @@
-MariaDB [door_db]> EXIT;
-Bye
-fatsic@raspberry:~ $ python3 log_serial_to_db.py
-Logging Arduino serial -> MariaDB (Ctrl+C to stop)
-WINDOW,START
-KNOCK,395,COUNT,1,ACCEPTED,0
-EVENT,SINGLE_KNOCK_POSTMAN
-WINDOW,END
-^CTraceback (most recent call last):
-  File "/home/fatsic/log_serial_to_db.py", line 26, in <module>
-    line = ser.readline().decode(errors="ignore").strip()
-  File "/usr/lib/python3/dist-packages/serial/serialposix.py", line 547, in read
-    ready, _, _ = select.select([self.fd, self.pipe_abort_read_r], [], [], timeout.time_left())
-KeyboardInterrupt
+import re
+import serial
+import pymysql
 
-fatsic@raspberry:~ $ SELECT id, ts, raw_line, event_type, knock_count, accepted
-FROM door_log
-ORDER BY id DESC
-LIMIT 10;
-bash: SELECT: command not found
-bash: FROM: command not found
-bash: ORDER: command not found
-bash: LIMIT: command not found
-fatsic@raspberry:~ $ mysql -u pi door_db
-Reading table information for completion of table and column names
-You can turn off this feature to get a quicker startup with -A
+PORT = "/dev/ttyACM0"
+BAUD = 9600
 
-Welcome to the MariaDB monitor.  Commands end with ; or \g.
-Your MariaDB connection id is 35
-Server version: 10.5.29-MariaDB-0+deb11u1 Debian 11
+conn = pymysql.connect(
+    host="localhost",
+    user="pi",
+    password="",
+    database="door_db",
+    autocommit=True
+)
 
-Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+ser = serial.Serial(PORT, BAUD, timeout=1)
 
-Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+last_knock_count = None
+last_accepted = None
 
-MariaDB [door_db]> SELECT id, ts, raw_line, event_type, knock_count, accepted
-    -> FROM door_log
-    -> ORDER BY id DESC
-    -> LIMIT 10;
-+----+---------------------+-------------------------------+----------------------+-------------+----------+
-| id | ts                  | raw_line                      | event_type           | knock_count | accepted |
-+----+---------------------+-------------------------------+----------------------+-------------+----------+
-| 16 | 2026-01-08 12:34:10 | WINDOW,END                    | NULL                 |           1 |        0 |
-| 15 | 2026-01-08 12:34:10 | EVENT,SINGLE_KNOCK_POSTMAN    | SINGLE_KNOCK_POSTMAN |           1 |        0 |
-| 14 | 2026-01-08 12:33:40 | KNOCK,395,COUNT,1,ACCEPTED,0  | NULL                 |           1 |        0 |
-| 13 | 2026-01-08 12:33:40 | WINDOW,START                  | NULL                 |        NULL |     NULL |
-| 12 | 2026-01-08 12:29:51 | KNOCK,379,COUNT,10,ACCEPTED,1 | NULL                 |          10 |        1 |
-| 11 | 2026-01-08 12:29:51 | KNOCK,246,COUNT,9,ACCEPTED,1  | NULL                 |           9 |        1 |
-| 10 | 2026-01-08 12:29:51 | KNOCK,302,COUNT,8,ACCEPTED,1  | NULL                 |           8 |        1 |
-|  9 | 2026-01-08 12:29:50 | KNOCK,227,COUNT,7,ACCEPTED,1  | NULL                 |           7 |        1 |
-|  8 | 2026-01-08 12:29:50 | KNOCK,132,COUNT,6,ACCEPTED,1  | NULL                 |           6 |        1 |
-|  7 | 2026-01-08 12:29:50 | KNOCK,274,COUNT,5,ACCEPTED,1  | NULL                 |           5 |        1 |
-+----+---------------------+-------------------------------+----------------------+-------------+----------+
-10 rows in set (0.000 sec)
+print("Logging Arduino serial -> MariaDB (Ctrl+C to stop)")
 
-MariaDB [door_db]> 
+with conn.cursor() as cur:
+    while True:
+        line = ser.readline().decode(errors="ignore").strip()
+        if not line:
+            continue
+
+        print(line)
+
+        m = re.search(r"COUNT,(\d+),ACCEPTED,(\d+)", line)
+        if m:
+            last_knock_count = int(m.group(1))
+            last_accepted = int(m.group(2))
+
+        if line == "BTN,ACCEPTED":
+            last_accepted = 1
+
+        event_type = None
+        if line.startswith("EVENT,"):
+            event_type = line.split(",", 1)[1]
+
+            if event_type == "SINGLE_KNOCK_POSTMAN":
+                ser.write(b"LED_SLOW\n")
+            elif event_type == "MULTI_KNOCK_VISITOR":
+                ser.write(b"LED_FAST\n")
+            elif event_type == "ACCEPTED_DOOR":
+                ser.write(b"LED_OFF\n")
+            elif event_type == "NO_KNOCK":
+                ser.write(b"LED_OFF\n")
+
+        cur.execute(
+            "INSERT INTO door_log (raw_line, event_type, knock_count, accepted) VALUES (%s, %s, %s, %s)",
+            (line, event_type, last_knock_count, last_accepted)
+        )
