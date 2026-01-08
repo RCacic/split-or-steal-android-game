@@ -1,2 +1,11 @@
-sudo stty -F /dev/ttyACM0 9600 -icanon -echo
-sudo cat /dev/ttyACM0
+CREATE DATABASE IF NOT EXISTS door_db;
+USE door_db;
+
+CREATE TABLE IF NOT EXISTS door_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  raw_line VARCHAR(255),
+  event_type VARCHAR(64),
+  knock_count INT,
+  accepted TINYINT
+);
