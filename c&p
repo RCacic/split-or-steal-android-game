@@ -53,3 +53,4 @@ with conn.cursor() as cur:
             "INSERT INTO door_log (raw_line, event_type, knock_count, accepted) VALUES (%s, %s, %s, %s)",
             (line, event_type, last_knock_count, last_accepted)
         )
+
