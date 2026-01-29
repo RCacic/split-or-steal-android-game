@@ -41,7 +41,7 @@ while True:
         client.publish(TOPIC, str(soil_value))
         print("MQTT ->", TOPIC, soil_value)
 
-        # Rule with hysteresis
+
         if pump_state == "OFF" and soil_value >= DRY_ON:
             ser.write(b"PUMP_ON\n")
             pump_state = "ON"
