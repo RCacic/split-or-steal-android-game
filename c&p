@@ -1,20 +1,24 @@
-!/usr/bin/env python3
+#!/usr/bin/env python3
 import time
+import json
 import serial
 import paho.mqtt.client as mqtt
 
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD = 9600
 
-MQTT_HOST = "localhost"
-MQTT_PORT = 1883
+TB_HOST = "demo.thingsboard.io"
+TB_PORT = 1883
+ACCESS_TOKEN = "4fknue2gat9jfkra6v6t"
 
-TOPIC_MOISTURE = "greenhouse/soil/moisture"   # publishes 0..5
-TOPIC_RAW      = "greenhouse/soil/raw"        # publishes raw 400..570-ish
-TOPIC_HOSE     = "greenhouse/soil/hose"       # "ON"/"OFF"
+TELEMETRY_TOPIC = "v1/devices/me/telemetry"
+RPC_SUBSCRIBE_TOPIC = "v1/devices/me/rpc/request/+"
 
 DRY_ON_LEVEL  = 4
 WET_OFF_LEVEL = 1
+
+AUTO_ENABLED = True
+
 def parse_line(line: str):
     """
     Expected: SOIL:<level>,RAW:<raw>
@@ -30,16 +34,56 @@ def parse_line(line: str):
     return level, raw
 
 def main():
+    global AUTO_ENABLED
+
     print(f"Opening serial: {SERIAL_PORT} @ {BAUD}")
     ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
-time.sleep(2)  # let Arduino reset
+    time.sleep(2)
 
-    print(f"Connecting MQTT: {MQTT_HOST}:{MQTT_PORT}")
+    print(f"Connecting ThingsBoard MQTT: {TB_HOST}:{TB_PORT}")
     client = mqtt.Client()
-    client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
+    client.username_pw_set(ACCESS_TOKEN)
+    client.connect(TB_HOST, TB_PORT, keepalive=60)
+
+    hose_state = "OFF" 
+
+    # -------- RPC HANDLER --------
+    def on_message(client, userdata, msg):
+        nonlocal hose_state
+        global AUTO_ENABLED
+
+        try:
+            payload = json.loads(msg.payload.decode(errors="ignore"))
+            method = payload.get("method")
+            params = payload.get("params")
+
+            if method == "hose_on":
+                ser.write(b"HOSE_ON\n")
+                hose_state = "ON"
+                AUTO_ENABLED = False 
+                print("RPC -> hose_on (sent HOSE_ON)")
+
+            elif method == "hose_off":
+                ser.write(b"HOSE_OFF\n")
+                hose_state = "OFF"
+                AUTO_ENABLED = False
+                print("RPC -> hose_off (sent HOSE_OFF)")
+
+            elif method == "set_auto":
+                AUTO_ENABLED = bool(params)
+                print(f"RPC -> set_auto = {AUTO_ENABLED}")
+
+            else:
+                print("RPC -> unknown method:", method)
+
+        except Exception as e:
+            print("RPC error:", e)
+
+    client.subscribe(RPC_SUBSCRIBE_TOPIC)
+    client.on_message = on_message
     client.loop_start()
 
-    hose_state = "OFF"  # track current state so we don't spam commands
+    print("Connected. Reading soil data + sending telemetry to ThingsBoard...")
 
     try:
         while True:
@@ -47,31 +91,34 @@ time.sleep(2)  # let Arduino reset
             if not raw_line:
                 continue
 
+            # Optional debug:
             print("SERIAL:", raw_line)
 
             parsed = parse_line(raw_line)
             if not parsed:
                 continue
- level, raw = parsed
 
-            # Publish sensor data
-            client.publish(TOPIC_MOISTURE, str(level))
-            client.publish(TOPIC_RAW, str(raw))
-            print(f"MQTT -> {TOPIC_MOISTURE} {level}")
-            print(f"MQTT -> {TOPIC_RAW} {raw}")
+            level, raw = parsed
 
-            # Decide hose/LED
-            if hose_state == "OFF" and level >= DRY_ON_LEVEL:
-                hose_state = "ON"
-                ser.write(b"HOSE_ON\n")
-                client.publish(TOPIC_HOSE, "ON")
-                print("CMD -> HOSE_ON (LED ON)")
+            telemetry = {
+                "soil_level": level,     # 0..5
+                "soil_raw": raw,         # ~400..570-ish
+                "hose_state": hose_state,
+                "auto_enabled": AUTO_ENABLED
+            }
+            client.publish(TELEMETRY_TOPIC, json.dumps(telemetry))
 
-            elif hose_state == "ON" and level <= WET_OFF_LEVEL:
-                hose_state = "OFF"
-                ser.write(b"HOSE_OFF\n")
-                client.publish(TOPIC_HOSE, "OFF")
-                print("CMD -> HOSE_OFF (LED OFF)")
+            if AUTO_ENABLED:
+                if hose_state == "OFF" and level >= DRY_ON_LEVEL:
+                    hose_state = "ON"
+                    ser.write(b"HOSE_ON\n")
+                    print("AUTO -> HOSE_ON")
+
+                elif hose_state == "ON" and level <= WET_OFF_LEVEL:
+                    hose_state = "OFF"
+                    ser.write(b"HOSE_OFF\n")
+                    print("AUTO -> HOSE_OFF")
+
             time.sleep(0.05)
 
     except KeyboardInterrupt:
