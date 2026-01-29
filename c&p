@@ -1,15 +1,92 @@
-ERIAL: SOIL:0,RAW:0
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:1
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:0
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:8
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:9
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:7
-MQTT -> greenhouse/soil/moisture 0
-SERIAL: SOIL:0,RAW:0
-MQTT -> greenhouse/soil/moisture 0
+#!/usr/bin/env python3
+import time
+import serial
+import paho.mqtt.client as mqtt
 
+SERIAL_PORT = "/dev/ttyACM0"
+BAUD = 9600
+
+MQTT_HOST = "localhost"
+MQTT_PORT = 1883
+
+TOPIC_MOISTURE = "greenhouse/soil/moisture"   # publishes 0..5
+TOPIC_RAW      = "greenhouse/soil/raw"        # publishes raw 400..570-ish
+TOPIC_HOSE     = "greenhouse/soil/hose"       # "ON"/"OFF"
+
+# Hose/LED logic with hysteresis:
+# - Turn ON when level >= 4 (dry)
+# - Turn OFF when level <= 1 (wet)
+DRY_ON_LEVEL  = 4
+WET_OFF_LEVEL = 1
+
+def parse_line(line: str):
+    """
+    Expected: SOIL:<level>,RAW:<raw>
+    Example:  SOIL:5,RAW:570
+    """
+    line = line.strip()
+    if not line.startswith("SOIL:"):
+        return None
+
+    parts = line.split(",")
+    level = int(parts[0].split(":")[1])
+    raw   = int(parts[1].split(":")[1])
+    return level, raw
+
+def main():
+    print(f"Opening serial: {SERIAL_PORT} @ {BAUD}")
+    ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+    time.sleep(2)  # let Arduino reset
+
+    print(f"Connecting MQTT: {MQTT_HOST}:{MQTT_PORT}")
+    client = mqtt.Client()
+    client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
+    client.loop_start()
+
+    hose_state = "OFF"  # track current state so we don't spam commands
+
+    try:
+        while True:
+            raw_line = ser.readline().decode(errors="ignore").strip()
+            if not raw_line:
+                continue
+
+            print("SERIAL:", raw_line)
+
+            parsed = parse_line(raw_line)
+            if not parsed:
+                continue
+
+            level, raw = parsed
+
+            # Publish sensor data
+            client.publish(TOPIC_MOISTURE, str(level))
+            client.publish(TOPIC_RAW, str(raw))
+            print(f"MQTT -> {TOPIC_MOISTURE} {level}")
+            print(f"MQTT -> {TOPIC_RAW} {raw}")
+
+            # Decide hose/LED
+            if hose_state == "OFF" and level >= DRY_ON_LEVEL:
+                hose_state = "ON"
+                ser.write(b"HOSE_ON\n")
+                client.publish(TOPIC_HOSE, "ON")
+                print("CMD -> HOSE_ON (LED ON)")
+
+            elif hose_state == "ON" and level <= WET_OFF_LEVEL:
+                hose_state = "OFF"
+                ser.write(b"HOSE_OFF\n")
+                client.publish(TOPIC_HOSE, "OFF")
+                print("CMD -> HOSE_OFF (LED OFF)")
+
+            time.sleep(0.05)
+
+    except KeyboardInterrupt:
+        print("\nStopping...")
+
+    finally:
+        client.loop_stop()
+        client.disconnect()
+        ser.close()
+
+if __name__ == "__main__":
+    main()
