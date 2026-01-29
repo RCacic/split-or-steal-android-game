@@ -46,8 +46,6 @@ def main():
     client.connect(TB_HOST, TB_PORT, keepalive=60)
 
     hose_state = "OFF" 
-
-    # -------- RPC HANDLER --------
     def on_message(client, userdata, msg):
         nonlocal hose_state
         global AUTO_ENABLED
@@ -90,8 +88,6 @@ def main():
             raw_line = ser.readline().decode(errors="ignore").strip()
             if not raw_line:
                 continue
-
-            # Optional debug:
             print("SERIAL:", raw_line)
 
             parsed = parse_line(raw_line)
