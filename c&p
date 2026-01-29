@@ -2,15 +2,15 @@ import serial
 import time
 import paho.mqtt.client as mqtt
 
-SERIAL_PORT = "/dev/ttyACM0"   # update if needed
+SERIAL_PORT = "/dev/ttyACM0"
 BAUD = 9600
 
 BROKER = "localhost"
 TOPIC = "greenhouse/soil/moisture"
 
-# Your 0–5 rules:
-DRY_ON = 4     # start watering when soil >= 4
-WET_OFF = 1    # stop watering when soil <= 1
+
+DRY_ON = 4
+WET_OFF = 1
 
 pump_state = "OFF"
 
@@ -18,7 +18,7 @@ client = mqtt.Client()
 client.connect(BROKER, 1883, 60)
 
 ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
-time.sleep(2)  # let Arduino reset
+time.sleep(2)
 
 print("Connected. Reading soil (0–5) + publishing MQTT...")
 
@@ -29,11 +29,10 @@ while True:
 
     print("SERIAL:", line)
 
-    # Example line: SOIL:3,RAW:612
     if line.startswith("SOIL:"):
         try:
             parts = line.split(",")
-            soil_value = int(parts[0].split(":")[1])  # the 0–5 value
+            soil_value = int(parts[0].split(":")[1])
         except:
             continue
 
