@@ -1,54 +1,15 @@
-import serial
-import time
-import paho.mqtt.client as mqtt
+ERIAL: SOIL:0,RAW:0
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:1
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:0
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:8
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:9
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:7
+MQTT -> greenhouse/soil/moisture 0
+SERIAL: SOIL:0,RAW:0
+MQTT -> greenhouse/soil/moisture 0
 
-SERIAL_PORT = "/dev/ttyACM0"
-BAUD = 9600
-
-BROKER = "localhost"
-TOPIC = "greenhouse/soil/moisture"
-
-
-DRY_ON = 4
-WET_OFF = 1
-
-pump_state = "OFF"
-
-client = mqtt.Client()
-client.connect(BROKER, 1883, 60)
-
-ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
-time.sleep(2)
-
-print("Connected. Reading soil (0–5) + publishing MQTT...")
-
-while True:
-    line = ser.readline().decode("utf-8", errors="ignore").strip()
-    if not line:
-        continue
-
-    print("SERIAL:", line)
-
-    if line.startswith("SOIL:"):
-        try:
-            parts = line.split(",")
-            soil_value = int(parts[0].split(":")[1])
-        except:
-            continue
-
-        # Publish MQTT
-        client.publish(TOPIC, str(soil_value))
-        print("MQTT ->", TOPIC, soil_value)
-
-
-        if pump_state == "OFF" and soil_value >= DRY_ON:
-            ser.write(b"PUMP_ON\n")
-            pump_state = "ON"
-            print("RULE: dry (>=4) -> PUMP_ON")
-
-        elif pump_state == "ON" and soil_value <= WET_OFF:
-            ser.write(b"PUMP_OFF\n")
-            pump_state = "OFF"
-            print("RULE: wet (<=1) -> PUMP_OFF")
-
-    time.sleep(0.05)
