@@ -1,17 +1,56 @@
-fatsic@raspberry:~ $ python3 soil_serial_to_mqtt.py
-Traceback (most recent call last):
-  File "/usr/lib/python3/dist-packages/serial/serialposix.py", line 322, in open
-    self.fd = os.open(self.portstr, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-FileNotFoundError: [Errno 2] No such file or directory: '/dev/ttyACM0'
+import serial
+import time
+import paho.mqtt.client as mqtt
 
-During handling of the above exception, another exception occurred:
+SERIAL_PORT = "/dev/ttyACM0"   # change if yours differs
+BAUD = 9600
 
-Traceback (most recent call last):
-  File "/home/fatsic/soil_serial_to_mqtt.py", line 13, in <module>
-    ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
-  File "/usr/lib/python3/dist-packages/serial/serialutil.py", line 244, in __init__
-    self.open()
-  File "/usr/lib/python3/dist-packages/serial/serialposix.py", line 325, in open
-    raise SerialException(msg.errno, "could not open port {}: {}".format(self._port, msg))
-serial.serialutil.SerialException: [Errno 2] could not open port /dev/ttyACM0: [Errno 2] No such file or directory: '/dev/ttyACM0'
-fatsic@raspberry:~ $ 
+BROKER = "localhost"
+TOPIC = "greenhouse/soil/moisture"
+
+# Tweak these based on your sensor behaviour
+DRY_ON = 400
+WET_OFF = 450
+
+pump_state = "OFF"
+
+client = mqtt.Client()
+client.connect(BROKER, 1883, 60)
+
+ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+time.sleep(2)  # let Arduino reset
+
+print("Connected. Reading soil + publishing MQTT...")
+
+while True:
+    line = ser.readline().decode("utf-8", errors="ignore").strip()
+
+    if not line:
+        continue
+
+    # debug print
+    print("SERIAL:", line)
+
+    # Expected: SOIL:123
+    if line.startswith("SOIL:"):
+        try:
+            soil_value = int(line.split(":")[1])
+        except:
+            continue
+
+        # Publish MQTT
+        client.publish(TOPIC, str(soil_value))
+        print("MQTT ->", TOPIC, soil_value)
+
+        # Rule + hysteresis
+        if pump_state == "OFF" and soil_value < DRY_ON:
+            ser.write(b"PUMP_ON\n")
+            pump_state = "ON"
+            print("RULE: soil dry -> PUMP_ON")
+
+        elif pump_state == "ON" and soil_value > WET_OFF:
+            ser.write(b"PUMP_OFF\n")
+            pump_state = "OFF"
+            print("RULE: soil wet -> PUMP_OFF")
+
+    time.sleep(0.05)
