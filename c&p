@@ -2,15 +2,15 @@ import serial
 import time
 import paho.mqtt.client as mqtt
 
-SERIAL_PORT = "/dev/ttyACM0"   # change if yours differs
+SERIAL_PORT = "/dev/ttyACM0"   # update if needed
 BAUD = 9600
 
 BROKER = "localhost"
 TOPIC = "greenhouse/soil/moisture"
 
-# Tweak these based on your sensor behaviour
-DRY_ON = 400
-WET_OFF = 450
+# Your 0–5 rules:
+DRY_ON = 4     # start watering when soil >= 4
+WET_OFF = 1    # stop watering when soil <= 1
 
 pump_state = "OFF"
 
@@ -20,21 +20,20 @@ client.connect(BROKER, 1883, 60)
 ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
 time.sleep(2)  # let Arduino reset
 
-print("Connected. Reading soil + publishing MQTT...")
+print("Connected. Reading soil (0–5) + publishing MQTT...")
 
 while True:
     line = ser.readline().decode("utf-8", errors="ignore").strip()
-
     if not line:
         continue
 
-    # debug print
     print("SERIAL:", line)
 
-    # Expected: SOIL:123
+    # Example line: SOIL:3,RAW:612
     if line.startswith("SOIL:"):
         try:
-            soil_value = int(line.split(":")[1])
+            parts = line.split(",")
+            soil_value = int(parts[0].split(":")[1])  # the 0–5 value
         except:
             continue
 
@@ -42,15 +41,15 @@ while True:
         client.publish(TOPIC, str(soil_value))
         print("MQTT ->", TOPIC, soil_value)
 
-        # Rule + hysteresis
-        if pump_state == "OFF" and soil_value < DRY_ON:
+        # Rule with hysteresis
+        if pump_state == "OFF" and soil_value >= DRY_ON:
             ser.write(b"PUMP_ON\n")
             pump_state = "ON"
-            print("RULE: soil dry -> PUMP_ON")
+            print("RULE: dry (>=4) -> PUMP_ON")
 
-        elif pump_state == "ON" and soil_value > WET_OFF:
+        elif pump_state == "ON" and soil_value <= WET_OFF:
             ser.write(b"PUMP_OFF\n")
             pump_state = "OFF"
-            print("RULE: soil wet -> PUMP_OFF")
+            print("RULE: wet (<=1) -> PUMP_OFF")
 
     time.sleep(0.05)
