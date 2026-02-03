@@ -1,28 +1,4 @@
-fatsic@raspberry:~ $ sudo systemctl status mosquitto
-● mosquitto.service - Mosquitto MQTT Broker
-     Loaded: loaded (/lib/systemd/system/mosquitto.service; enabled; vendor pre>
-     Active: active (running) since Tue 2026-02-03 11:08:47 AEDT; 2h 26min ago
-       Docs: man:mosquitto.conf(5)
-             man:mosquitto(8)
-    Process: 612 ExecStartPre=/bin/mkdir -m 740 -p /var/log/mosquitto (code=exi>
-    Process: 617 ExecStartPre=/bin/chown mosquitto /var/log/mosquitto (code=exi>
-    Process: 619 ExecStartPre=/bin/mkdir -m 740 -p /run/mosquitto (code=exited,>
-    Process: 622 ExecStartPre=/bin/chown mosquitto /run/mosquitto (code=exited,>
-   Main PID: 623 (mosquitto)
-      Tasks: 1 (limit: 2264)
-     Memory: 1.8M
-        CPU: 5.696s
-     CGroup: /system.slice/mosquitto.service
-             └─623 /usr/sbin/mosquitto -c /etc/mosquitto/mosquitto.conf
+mosquitto_sub -h mqtt.thingsboard.cloud -p 1883 \
+  -u "4fknue2gat9jfkra6v6t" \
+  -t "v1/devices/me/rpc/request/+"
 
-Feb 03 11:08:47 raspberry systemd[1]: Starting Mosquitto MQTT Broker...
-Feb 03 11:08:47 raspberry systemd[1]: Started Mosquitto MQTT Broker.
- fatsic@raspberry:~ $ python3 soil_serial_to_mqtt.py
-Opening serial: /dev/ttyACM0 @ 9600
-Connecting ThingsBoard MQTT: mqtt.thingsboard.cloud:1883
-/home/fatsic/soil_serial_to_mqtt.py:43: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
-  client = mqtt.Client()
-Connected. Reading soil data + sending telemetry to ThingsBoard...
-AUTO -> HOSE_ON
-AUTO -> HOSE_OFF
-AUTO -> HOSE_ON
