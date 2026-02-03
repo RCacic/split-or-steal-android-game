@@ -1,3 +1,1 @@
-fatsic@raspberry:~ $ python3 -u soil_serial_to_mqtt.py
-/home/fatsic/soil_serial_to_mqtt.py:38: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
-  client = mqtt.Client()
+mosquitto_sub -h mqtt.thingsboard.cloud -p 1883 -t v1/devices/me/telemetry -u "4fknue2gat9jfkra6v6t" -v
