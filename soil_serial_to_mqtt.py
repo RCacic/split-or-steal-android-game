@@ -12,7 +12,6 @@ TB_PORT = 1883
 ACCESS_TOKEN = "4fknue2gat9jfkra6v6t"
 
 TELEMETRY_TOPIC = "v1/devices/me/telemetry"
-ATTRIBUTES_TOPIC = "v1/devices/me/attributes"
 RPC_SUBSCRIBE_TOPIC = "v1/devices/me/rpc/request/+"
 
 DRY_ON_LEVEL  = 4
@@ -28,7 +27,6 @@ def parse_line(line: str):
     line = line.strip()
     if not line.startswith("SOIL:"):
         return None
-
     parts = line.split(",")
     level = int(parts[0].split(":")[1])
     raw   = int(parts[1].split(":")[1])
@@ -48,19 +46,16 @@ def main():
 
     hose_state = "OFF"
 
-    last_attr_hose = None
-    last_attr_auto = None
-
-    def publish_attributes_if_changed():
-        nonlocal last_attr_hose, last_attr_auto
-        if hose_state != last_attr_hose or AUTO_ENABLED != last_attr_auto:
-            client.publish(ATTRIBUTES_TOPIC, json.dumps({
-                "hose_state": hose_state,
-                "auto_enabled": AUTO_ENABLED
-            }))
-            last_attr_hose = hose_state
-            last_attr_auto = AUTO_ENABLED
-            print("ATTR ->", {"hose_state": hose_state, "auto_enabled": AUTO_ENABLED})
+    def send_rpc_response(req_topic: str, payload_obj):
+        """
+        ThingsBoard expects responses on:
+        v1/devices/me/rpc/response/<requestId>
+        where requestId is the last part of req_topic.
+        """
+        req_id = req_topic.split("/")[-1]
+        resp_topic = f"v1/devices/me/rpc/response/{req_id}"
+        client.publish(resp_topic, json.dumps(payload_obj))
+        print(f"RPC RESP -> {resp_topic} {payload_obj}")
 
     def on_message(client, userdata, msg):
         nonlocal hose_state
@@ -71,27 +66,32 @@ def main():
             method = payload.get("method")
             params = payload.get("params")
 
+            if method == "checkStatus":
+                send_rpc_response(msg.topic, hose_state)
+                return
+
             if method == "hose_on":
                 ser.write(b"HOSE_ON\n")
                 hose_state = "ON"
                 AUTO_ENABLED = False
                 print("RPC -> hose_on (sent HOSE_ON)")
-                publish_attributes_if_changed()
+                send_rpc_response(msg.topic, True)
 
             elif method == "hose_off":
                 ser.write(b"HOSE_OFF\n")
                 hose_state = "OFF"
                 AUTO_ENABLED = False
                 print("RPC -> hose_off (sent HOSE_OFF)")
-                publish_attributes_if_changed()
+                send_rpc_response(msg.topic, True)
 
             elif method == "set_auto":
                 AUTO_ENABLED = bool(params)
                 print(f"RPC -> set_auto = {AUTO_ENABLED}")
-                publish_attributes_if_changed()
+                send_rpc_response(msg.topic, AUTO_ENABLED)
 
             else:
                 print("RPC -> unknown method:", method)
+                send_rpc_response(msg.topic, {"error": "unknown method"})
 
         except Exception as e:
             print("RPC error:", e)
@@ -107,7 +107,6 @@ def main():
             raw_line = ser.readline().decode(errors="ignore").strip()
             if not raw_line:
                 continue
-            print("SERIAL:", raw_line)
 
             parsed = parse_line(raw_line)
             if not parsed:
@@ -128,15 +127,11 @@ def main():
                     hose_state = "ON"
                     ser.write(b"HOSE_ON\n")
                     print("AUTO -> HOSE_ON")
-                    publish_attributes_if_changed()
 
                 elif hose_state == "ON" and level <= WET_OFF_LEVEL:
                     hose_state = "OFF"
                     ser.write(b"HOSE_OFF\n")
                     print("AUTO -> HOSE_OFF")
-                    publish_attributes_if_changed()
-
-            publish_attributes_if_changed()
 
             time.sleep(0.05)
 
