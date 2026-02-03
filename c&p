@@ -1,12 +1,10 @@
-fatsic@raspberry:~ $ mosquitto_pub -d -q 1 \
-  -h mqtt.thingsboard.cloud \
-  -p 1883 \
-  -t v1/devices/me/telemetry \
-  -u "4fknue2gat9jfkra6v6t" \
-  -m '{"temperature":25}'
-Client (null) sending CONNECT
-Client (null) received CONNACK (0)
-Client (null) sending PUBLISH (d0, q1, r0, m1, 'v1/devices/me/telemetry', ... (18 bytes))
-Client (null) received PUBACK (Mid: 1, RC:0)
-Client (null) sending DISCONNECT
-fatsic@raspberry:~ $ 
+fatsic@raspberry:~ $ python3 soil_serial_to_mqtt.py
+Opening serial: /dev/ttyACM0 @ 9600
+Connecting ThingsBoard MQTT: mqtt.thingsboard.cloud:1883
+/home/fatsic/soil_serial_to_mqtt.py:43: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+  client = mqtt.Client()
+Connected. Reading soil data + sending telemetry to ThingsBoard...
+AUTO -> HOSE_ON
+AUTO -> HOSE_OFF
+AUTO -> HOSE_ON
+
