@@ -1,8 +1,2 @@
-", line 95, in main
-    time.sleep(1)
-KeyboardInterrupt
-
-fatsic@raspberry:~ $ pkill -f soil_serial_to_mqtt.py
-fatsic@raspberry:~ $ python3 -u soil_serial_to_mqtt.py
-/home/fatsic/soil_serial_to_mqtt.py:38: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
-  client = mqtt.Client()
+sudo apt-get install -y screen
+screen /dev/ttyACM0 9600
