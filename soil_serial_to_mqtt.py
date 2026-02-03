@@ -9,28 +9,36 @@ BAUD = 9600
 
 TB_HOST = "mqtt.thingsboard.cloud"
 TB_PORT = 1883
-ACCESS_TOKEN = "4fknue2gat9jfkra6v6t"
+ACCESS_TOKEN = "PUT_YOUR_TOKEN_HERE"
 
 TELEMETRY_TOPIC = "v1/devices/me/telemetry"
 RPC_SUBSCRIBE_TOPIC = "v1/devices/me/rpc/request/+"
 
-DRY_ON_LEVEL  = 4
-WET_OFF_LEVEL = 1
+
+DRY_ON_LEVEL  = 4  
+WET_OFF_LEVEL = 1 
 
 AUTO_ENABLED = True
 
+
 def parse_line(line: str):
     """
-    Expected: SOIL:<level>,RAW:<raw>
-    Example:  SOIL:5,RAW:570
+    Expected from Arduino:
+      SOIL:<level>,RAW:<raw>
+    Example:
+      SOIL:5,RAW:570
     """
     line = line.strip()
     if not line.startswith("SOIL:"):
         return None
-    parts = line.split(",")
-    level = int(parts[0].split(":")[1])
-    raw   = int(parts[1].split(":")[1])
-    return level, raw
+
+    try:
+        parts = line.split(",")
+        level = int(parts[0].split(":")[1])
+        raw   = int(parts[1].split(":")[1])
+        return level, raw
+    except:
+        return None
 
 def main():
     global AUTO_ENABLED
@@ -46,17 +54,6 @@ def main():
 
     hose_state = "OFF"
 
-    def send_rpc_response(req_topic: str, payload_obj):
-        """
-        ThingsBoard expects responses on:
-        v1/devices/me/rpc/response/<requestId>
-        where requestId is the last part of req_topic.
-        """
-        req_id = req_topic.split("/")[-1]
-        resp_topic = f"v1/devices/me/rpc/response/{req_id}"
-        client.publish(resp_topic, json.dumps(payload_obj))
-        print(f"RPC RESP -> {resp_topic} {payload_obj}")
-
     def on_message(client, userdata, msg):
         nonlocal hose_state
         global AUTO_ENABLED
@@ -66,32 +63,26 @@ def main():
             method = payload.get("method")
             params = payload.get("params")
 
-            if method == "checkStatus":
-                send_rpc_response(msg.topic, hose_state)
-                return
+            print("RPC IN:", payload)
 
             if method == "hose_on":
                 ser.write(b"HOSE_ON\n")
                 hose_state = "ON"
                 AUTO_ENABLED = False
-                print("RPC -> hose_on (sent HOSE_ON)")
-                send_rpc_response(msg.topic, True)
+                print("RPC -> HOSE_ON sent to Arduino")
 
             elif method == "hose_off":
                 ser.write(b"HOSE_OFF\n")
                 hose_state = "OFF"
                 AUTO_ENABLED = False
-                print("RPC -> hose_off (sent HOSE_OFF)")
-                send_rpc_response(msg.topic, True)
+                print("RPC -> HOSE_OFF sent to Arduino")
 
             elif method == "set_auto":
                 AUTO_ENABLED = bool(params)
-                print(f"RPC -> set_auto = {AUTO_ENABLED}")
-                send_rpc_response(msg.topic, AUTO_ENABLED)
+                print("RPC -> set_auto =", AUTO_ENABLED)
 
             else:
                 print("RPC -> unknown method:", method)
-                send_rpc_response(msg.topic, {"error": "unknown method"})
 
         except Exception as e:
             print("RPC error:", e)
@@ -100,28 +91,27 @@ def main():
     client.on_message = on_message
     client.loop_start()
 
-    print("Connected. Reading soil data + sending telemetry to ThingsBoard...")
+    print("Connected. Reading serial + sending telemetry...")
 
     try:
         while True:
-            raw_line = ser.readline().decode(errors="ignore").strip()
-            if not raw_line:
+            line = ser.readline().decode(errors="ignore").strip()
+            if not line:
                 continue
 
-            parsed = parse_line(raw_line)
+       
+            if line.startswith("ACK:") or line == "READY":
+                print("SERIAL:", line)
+                continue
+
+            parsed = parse_line(line)
             if not parsed:
+            
                 continue
 
             level, raw = parsed
 
-            telemetry = {
-                "soil_level": level,
-                "soil_raw": raw,
-                "hose_state": hose_state,
-                "auto_enabled": AUTO_ENABLED
-            }
-            client.publish(TELEMETRY_TOPIC, json.dumps(telemetry))
-
+         
             if AUTO_ENABLED:
                 if hose_state == "OFF" and level >= DRY_ON_LEVEL:
                     hose_state = "ON"
@@ -133,7 +123,17 @@ def main():
                     ser.write(b"HOSE_OFF\n")
                     print("AUTO -> HOSE_OFF")
 
-            time.sleep(0.05)
+            telemetry = {
+                "soil_level": level,
+                "soil_raw": raw,
+                "hose_state": hose_state,
+                "auto_enabled": AUTO_ENABLED
+            }
+
+            client.publish(TELEMETRY_TOPIC, json.dumps(telemetry))
+            print("TB ->", telemetry)
+
+            time.sleep(0.2)
 
     except KeyboardInterrupt:
         print("\nStopping...")
