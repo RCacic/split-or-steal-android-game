@@ -12,6 +12,7 @@ TB_PORT = 1883
 ACCESS_TOKEN = "4fknue2gat9jfkra6v6t"
 
 TELEMETRY_TOPIC = "v1/devices/me/telemetry"
+ATTRIBUTES_TOPIC = "v1/devices/me/attributes"
 RPC_SUBSCRIBE_TOPIC = "v1/devices/me/rpc/request/+"
 
 DRY_ON_LEVEL  = 4
@@ -45,7 +46,22 @@ def main():
     client.username_pw_set(ACCESS_TOKEN)
     client.connect(TB_HOST, TB_PORT, keepalive=60)
 
-    hose_state = "OFF" 
+    hose_state = "OFF"
+
+    last_attr_hose = None
+    last_attr_auto = None
+
+    def publish_attributes_if_changed():
+        nonlocal last_attr_hose, last_attr_auto
+        if hose_state != last_attr_hose or AUTO_ENABLED != last_attr_auto:
+            client.publish(ATTRIBUTES_TOPIC, json.dumps({
+                "hose_state": hose_state,
+                "auto_enabled": AUTO_ENABLED
+            }))
+            last_attr_hose = hose_state
+            last_attr_auto = AUTO_ENABLED
+            print("ATTR ->", {"hose_state": hose_state, "auto_enabled": AUTO_ENABLED})
+
     def on_message(client, userdata, msg):
         nonlocal hose_state
         global AUTO_ENABLED
@@ -58,18 +74,21 @@ def main():
             if method == "hose_on":
                 ser.write(b"HOSE_ON\n")
                 hose_state = "ON"
-                AUTO_ENABLED = False 
+                AUTO_ENABLED = False
                 print("RPC -> hose_on (sent HOSE_ON)")
+                publish_attributes_if_changed()
 
             elif method == "hose_off":
                 ser.write(b"HOSE_OFF\n")
                 hose_state = "OFF"
                 AUTO_ENABLED = False
                 print("RPC -> hose_off (sent HOSE_OFF)")
+                publish_attributes_if_changed()
 
             elif method == "set_auto":
                 AUTO_ENABLED = bool(params)
                 print(f"RPC -> set_auto = {AUTO_ENABLED}")
+                publish_attributes_if_changed()
 
             else:
                 print("RPC -> unknown method:", method)
@@ -109,11 +128,15 @@ def main():
                     hose_state = "ON"
                     ser.write(b"HOSE_ON\n")
                     print("AUTO -> HOSE_ON")
+                    publish_attributes_if_changed()
 
                 elif hose_state == "ON" and level <= WET_OFF_LEVEL:
                     hose_state = "OFF"
                     ser.write(b"HOSE_OFF\n")
                     print("AUTO -> HOSE_OFF")
+                    publish_attributes_if_changed()
+
+            publish_attributes_if_changed()
 
             time.sleep(0.05)
 
