@@ -1,13 +1,48 @@
-python3 serial_to_thingsboard_main.py --serial-port /dev/ttyACM0 --baud 9600 --tb-host mqtt.thingsboard.cloud --device-token 4fknue2gat9jfkra6v6t
-cd web_app/backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-copy .env.example .env
-fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ python -m venv .venv
-fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ python -m venv .venv
-.venv\Scripts\Activate.ps1
-bash: .venvScriptsActivate.ps1: command not found
-fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ .venv\Scripts\Activate.ps1
-bash: .venvScriptsActivate.ps1: command not found
-fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ 
+fatsic@raspberry:~ $ ls /dev/ttyACM*
+/dev/ttyACM1
+fatsic@raspberry:~ $ ls
+2025-12-14-201227_800x600_scrot.png
+2025-12-14-201233_800x600_scrot.png
+2026-01-11-113504_800x600_scrot.png
+2026-01-11-113700_800x600_scrot.png
+Bookshelf
+Desktop
+Documents
+Downloads
+Edge_Device_2.py
+Edge_Device.py
+log_serial_to_db.py
+Music
+Pictures
+Public
+read_serial.py
+serial_read_sim.py
+serial_read_sim.py.save
+soil_serial_to_mqtt.py
+soil_serial_to_mqtt.py.save
+SWE30011-IoT-Programming-Assignment-4-Group-main
+Templates
+Videos
+web-server
+fatsic@raspberry:~ $ cd SWE30011-IoT-Programming-Assignment-4-Group-main
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main $ cd Edge_Device_2
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/Edge_Device_2 $ python3 -u Edge_Device_2.py
+Opening serial: /dev/ttyACM0 @ 9600
+Traceback (most recent call last):
+  File "/home/fatsic/.local/lib/python3.9/site-packages/serial/serialposix.py", line 322, in open
+    self.fd = os.open(self.portstr, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+FileNotFoundError: [Errno 2] No such file or directory: '/dev/ttyACM0'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/fatsic/SWE30011-IoT-Programming-Assignment-4-Group-main/Edge_Device_2/Edge_Device_2.py", line 176, in <module>
+    main()
+  File "/home/fatsic/SWE30011-IoT-Programming-Assignment-4-Group-main/Edge_Device_2/Edge_Device_2.py", line 48, in main
+    ser = serial.Serial(SERIAL_PORT, BAUD, timeout=1)
+  File "/home/fatsic/.local/lib/python3.9/site-packages/serial/serialutil.py", line 244, in __init__
+    self.open()
+  File "/home/fatsic/.local/lib/python3.9/site-packages/serial/serialposix.py", line 325, in open
+    raise SerialException(msg.errno, "could not open port {}: {}".format(self._port, msg))
+serial.serialutil.SerialException: [Errno 2] could not open port /dev/ttyACM0: [Errno 2] No such file or directory: '/dev/ttyACM0'
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/Edge_Device_2 $ 
