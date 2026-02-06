@@ -4,3 +4,10 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ python -m venv .venv
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ python -m venv .venv
+.venv\Scripts\Activate.ps1
+bash: .venvScriptsActivate.ps1: command not found
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ .venv\Scripts\Activate.ps1
+bash: .venvScriptsActivate.ps1: command not found
+fatsic@raspberry:~/SWE30011-IoT-Programming-Assignment-4-Group-main/web_app/backend $ 
