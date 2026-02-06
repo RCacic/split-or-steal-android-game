@@ -1,1 +1,2 @@
-mosquitto_sub -h mqtt.thingsboard.cloud -p 1883 -t v1/devices/me/telemetry -u "4fknue2gat9jfkra6v6t" -v
+
+python3 serial_to_thingsboard_main.py --serial-port /dev/ttyACM0 --baud 9600 --tb-host mqtt.thingsboard.cloud --device-token 4fknue2gat9jfkra6v6t
